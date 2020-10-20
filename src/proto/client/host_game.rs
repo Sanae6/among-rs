@@ -1,4 +1,5 @@
 extern crate protocol;
+use crate::proto::AmongUsPacket;
 
 #[derive(Protocol, Debug, PartialEq)]
 pub struct HostGame{
