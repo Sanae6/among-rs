@@ -43,10 +43,8 @@ pub fn code_to_i32(code: &str) -> Result<i32,&str>{
     }else {
         Err("Code must be length of 4 (V1) or 6 (V2)")
     }
-
 }
 
-/*pub fn i32_to_code_v2() -> &str{
+pub fn i32_to_code_v2(){
 
-    ""
-}*/
+}

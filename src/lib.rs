@@ -1,38 +1,116 @@
-#![feature(arbitrary_enum_discriminant)]
-#[macro_use] extern crate protocol_derive;
-pub mod proto;
-pub mod util;
-pub mod net;
+use std::io::{Error, ErrorKind, Read, Write};
 
-#[cfg(test)]
-pub mod tests {
-    use protocol::Parcel;
+pub mod codes;
+pub mod packets;
+pub mod reason;
+mod coding;
+mod tests;
+pub(in crate) mod game_options;
 
-    const V1CODES: [&str;4] = [
-        "AAAA",
-        "ABCD",
-        "WXYZ",
-        "MRCY"
-    ];
-    #[test]
-    fn test_codes_to_num(){
+pub use reason::Reason;
+use byteorder::{ReadBytesExt, BigEndian, WriteBytesExt};
+use crate::coding::{Packet, DecodeResult, EncodeResult};
+use crate::packets::{Payload, HazelDataPacket, HazelPacket, HelloPayload, JoinGame};
+use crate::packets::HostGameResponse;
+use std::borrow::Borrow;
 
-        let v1nums: Vec<i32> = V1CODES.iter().map(|x| crate::util::codes::code_to_i32(x).unwrap()).collect();
-        println!("{} = {:#08x}", V1CODES[0], v1nums[0]);
-        assert_eq!(v1nums[0], 0x41414141);
-        println!("{} = {:#08x}", V1CODES[1], v1nums[1]);
-        assert_eq!(v1nums[1], (0x41424344 as i32).to_be());
-        println!("{} = {:#08x}", V1CODES[2], v1nums[2]);
-        assert_eq!(v1nums[2], (0x5758595A as i32).to_be());
-        println!("{} = {:#08x}", V1CODES[3], v1nums[3]);
-        assert_eq!(v1nums[3], (0x4D524359 as i32).to_be());
-        let code = crate::util::codes::code_to_i32("ABKKCF").unwrap();
-        println!("{:}", code);//assert_eq!()
+fn read_data_packet(read: &mut dyn Read, serverside: bool) -> DecodeResult<Payload>{
+    match read.read_u8()? {
+        0 => if serverside {
+            Ok(Payload::HostGame())
+        } else {
+            Ok(Payload::HostGameResponse(HostGameResponse::decode(read)?))
+        },
+        1 => if serverside {
+            Ok(Payload::JoinGame(JoinGame::decode(read)?))
+        }else {
+            Ok(Payload::HostGame())
+        }
+        _ => Err(Error::new(ErrorKind::InvalidInput,"Couldn't match a payload id!"))
     }
+}
 
-    #[test]
-    fn test_pack_varint(){
-        let x = 0xd209 as crate::util::varint::Varint;
-        println!("{:#02X?}",x.raw_bytes());
+pub fn read_data(read: &mut dyn Read, serverside: bool) -> DecodeResult<HazelPacket>{
+    match read.read_u8()? {
+        0 => {
+            Ok(HazelPacket::Normal(HazelDataPacket{
+                nonce: 0,
+                data: read_data_packet(read,serverside)?
+            }))
+        }
+        1 => {
+            Ok(HazelPacket::Reliable(HazelDataPacket{
+                nonce: read.read_u16::<BigEndian>()?,
+                data: read_data_packet(read,serverside)?
+            }))
+        }
+        8 => Ok(HazelPacket::Hello(HazelDataPacket{
+            nonce: read.read_u16::<BigEndian>()?,
+            data: Payload::Hello(HelloPayload::decode(read)?)
+        })),
+        9 => Ok(HazelPacket::Disconnect(None)),
+        10 => Ok(HazelPacket::Ack(read.read_u16::<BigEndian>()?)),
+        12 => Ok(HazelPacket::Ping(read.read_u16::<BigEndian>()?)),
+        _ => Err(Error::new(ErrorKind::InvalidInput, "Invalid header control type"))
     }
+}
+
+fn write_data_packet(write: &mut dyn Write, payload: Payload, serverside: bool) -> EncodeResult{
+    Ok(match payload{
+        Payload::Hello(p) => {
+            if serverside {
+                unimplemented!()
+            } else {
+                HelloPayload::handle(Box::from(p), write)?;
+            }
+        }
+        Payload::HostGame() => {
+
+        }
+        Payload::HostGameResponse(p) => {
+            HostGameResponse::handle(Box::from(p), write)?;
+        }
+        Payload::JoinGame(p) => {
+            JoinGame::handle(Box::from(p), write)?;
+        }
+        Payload::GameError(p) => {
+            Reason::handle(Box::from(p), write)?;
+        }
+    })
+}
+
+pub fn write_reliable(write: &mut dyn Write, payload: Payload, nonce: u16, serverside: bool) -> EncodeResult{
+    write.write_u8(1)?;
+    write.write_u16::<BigEndian>(nonce)?;
+    write_data_packet(write, payload, serverside);
+
+    Ok(())
+}
+
+pub fn write_unreliable(write: &mut dyn Write, payload: Payload, serverside: bool) -> EncodeResult{
+    write.write_u8(0)?;
+    write_data_packet(write, payload, serverside);
+
+    Ok(())
+}
+
+pub fn write_ack(write: &mut dyn Write, nonce: u16) -> EncodeResult{
+    write.write_u8(10)?;
+    write.write_u16::<BigEndian>(nonce)?;
+
+    Ok(())
+}
+
+/**
+Writes a disconnect packet.
+
+Reason can be none, and will not add one if used.
+*/
+pub fn write_disconnect(write: &mut dyn Write, reason: Option<Reason>) -> EncodeResult{
+    write.write_u8(9)?;
+    if reason.is_some() {
+        let r = reason.unwrap();
+        Reason::handle(Box::from(r), write)?;
+    }
+    Ok(())
 }
