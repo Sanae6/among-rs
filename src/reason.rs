@@ -21,7 +21,7 @@ pub enum Reason {
     ServerClosed,
     ServerOverloaded
 }
-impl Packet for Reason{
+impl Packet for Reason {
     fn decode(read: &mut dyn Read) -> DecodeResult<Reason> where
         Self: Sized {
         let r = read.read_u8()?;
@@ -32,7 +32,7 @@ impl Packet for Reason{
     }
 
     fn handle(self: Box<Self>, write: &mut dyn Write) -> EncodeResult {
-        let (t, str): (u8, Option<&String>) = match self.as_ref(){
+        let (t, str): (u8, Option<&String>) = match self.as_ref() {
             Reason::None => (0,None),
             Reason::GameFull => (1,None),
             Reason::GameStarted => (2,None),
@@ -51,7 +51,7 @@ impl Packet for Reason{
             Reason::ServerOverloaded => (0x14,None)
         };
         write.write_u8(t);
-        str.map_or((), |x| write_string(write,str.unwrap()).unwrap());
+        str.map_or((), |_| write_string(write,str.unwrap()).unwrap());
         Ok(())
     }
 }

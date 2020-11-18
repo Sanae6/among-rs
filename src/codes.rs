@@ -26,11 +26,12 @@ const V2MAP: [u8;26] = [
     0x05,
     0x11
 ];
-fn remap(char: i32)->i32{
+
+fn remap(char: i32) -> i32 {
     V2MAP[char as usize - 65 as usize] as i32
 }
 
-pub fn code_to_i32(code: &str) -> Result<i32,&str>{
+pub fn code_to_i32(code: &str) -> Result<i32,&str> {
     match code.len() {
         4 => {
             let x: Vec<i32> = code.as_bytes().iter().map(|x|*x as i32).collect();
@@ -46,4 +47,4 @@ pub fn code_to_i32(code: &str) -> Result<i32,&str>{
     }
 }
 
-//pub fn i32_to_code_v2(){}
+//pub fn i32_to_code_v2() {}
