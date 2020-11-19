@@ -1,17 +1,19 @@
 use std::io::{Read, Error, ErrorKind, Write};
-use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 
 pub type DecodeResult<T> = Result<T, Error>;
 pub type EncodeResult = Result<(), Error>;
 
-pub fn read_bytes(read: &mut dyn Read, amt: usize) -> DecodeResult<Vec<u8>>{
+#[allow(dead_code)]
+pub fn read_bytes(read: &mut dyn Read, amt: usize) -> DecodeResult<Vec<u8>> {
     let mut buf: Vec<u8> = Vec::new();
     for _ in 0..amt {
         buf.push(read.read_u8()?);
     };
     Ok(buf)
 }
-pub fn read_varint(read: &mut dyn Read)-> DecodeResult<i32>{
+
+pub fn read_varint(read: &mut dyn Read) -> DecodeResult<i32> {
     let mut read_more: bool = true;
     let mut output: i32 = 0;
     let mut shift: i32 = 0;
@@ -29,7 +31,7 @@ pub fn read_varint(read: &mut dyn Read)-> DecodeResult<i32>{
     }
     Ok(output)
 }
-pub fn read_string(read: &mut dyn Read)-> DecodeResult<String>{
+pub fn read_string(read: &mut dyn Read) -> DecodeResult<String> {
     let amt = read_varint(read)? as usize;
     let mut buf = Vec::new();
     buf.resize(amt, 0);
@@ -38,25 +40,27 @@ pub fn read_string(read: &mut dyn Read)-> DecodeResult<String>{
         .map_err(|e| Error::new(ErrorKind::InvalidData, e))
 }
 
-pub fn write_bytes(write: &mut dyn Write, bytes: Vec<u8>) -> EncodeResult{
+#[allow(dead_code)]
+pub fn write_bytes(write: &mut dyn Write, bytes: Vec<u8>) -> EncodeResult {
     write.write(&*bytes).map(|_| ())
 }
-pub fn write_varint(write: &mut dyn Write, val: i32) -> EncodeResult{
+
+pub fn write_varint(write: &mut dyn Write, val: i32) -> EncodeResult {
     let mut out: Vec<u8> = Vec::new();
     let mut valu = val;
-    loop{
+    loop {
         let mut b = (valu & 0xff) as u8;
         if valu >= 0x80 {
             b = b | 0x80;
         }
-        println!("{}",b);
+        //println!("{}",b);
         out.push(b);
         valu = valu >> 7;
         if valu <= 0 { break }
     }
-    write.write(&*out).map(|x| ())
+    write.write(&*out).map(|_| ())
 }
-pub fn write_string(write: &mut dyn Write, val: &String)-> EncodeResult{
+pub fn write_string(write: &mut dyn Write, val: &String) -> EncodeResult {
     println!("{:?}",val.len());
     write_varint(write, val.len() as i32).expect("failed to write varint");
     for x in val.as_bytes().iter(){
@@ -66,10 +70,10 @@ pub fn write_string(write: &mut dyn Write, val: &String)-> EncodeResult{
 }
 
 pub trait Packet : Send{
-    fn decode(read: &mut dyn Read)-> DecodeResult<Self>
+    fn decode(read: &mut dyn Read) -> DecodeResult<Self>
         where
             Self : Sized;
-    fn handle(self: Box<Self>, write: &mut dyn Write)-> EncodeResult
+    fn handle(self: Box<Self>, write: &mut dyn Write) -> EncodeResult
         where
             Self : Sized;
 }

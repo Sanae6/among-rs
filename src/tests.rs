@@ -8,9 +8,9 @@ pub mod tests {
         "WXYZ",
         "MRCY"
     ];
-    #[test]
-    fn test_codes_to_num(){
 
+    #[test]
+    fn test_codes_to_num() {
         let v1nums: Vec<i32> = V1CODES.iter().map(|x| crate::codes::code_to_i32(x).unwrap()).collect();
         println!("{} = {:#08x}", V1CODES[0], v1nums[0]);
         assert_eq!(v1nums[0], 0x41414141);
@@ -21,7 +21,8 @@ pub mod tests {
         println!("{} = {:#08x}", V1CODES[3], v1nums[3]);
         assert_eq!(v1nums[3], (0x4D524359 as i32).to_be());
         let code = crate::codes::code_to_i32("FEVFOS").unwrap();
-        println!("{:}", code);//assert_eq!()
+        println!("{:?}", code);
+        //assert_eq!()
     }
 
     #[test]

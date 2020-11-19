@@ -12,7 +12,6 @@ use byteorder::{ReadBytesExt, BigEndian, WriteBytesExt};
 use crate::coding::{Packet, DecodeResult, EncodeResult};
 use crate::packets::{Payload, HazelDataPacket, HazelPacket, HelloPayload, JoinGame};
 use crate::packets::HostGameResponse;
-use std::borrow::Borrow;
 
 fn read_data_packet(read: &mut dyn Read, serverside: bool) -> DecodeResult<Payload>{
     match read.read_u8()? {
@@ -23,7 +22,7 @@ fn read_data_packet(read: &mut dyn Read, serverside: bool) -> DecodeResult<Paylo
         },
         1 => if serverside {
             Ok(Payload::JoinGame(JoinGame::decode(read)?))
-        }else {
+        } else {
             Ok(Payload::HostGame())
         }
         _ => Err(Error::new(ErrorKind::InvalidInput,"Couldn't match a payload id!"))
@@ -101,11 +100,8 @@ pub fn write_ack(write: &mut dyn Write, nonce: u16) -> EncodeResult{
     Ok(())
 }
 
-/**
-Writes a disconnect packet.
-
-Reason can be none, and will not add one if used.
-*/
+/// Writes a disconnect packet.
+/// Reason can be none, and will not add one if used.
 pub fn write_disconnect(write: &mut dyn Write, reason: Option<Reason>) -> EncodeResult{
     write.write_u8(9)?;
     if reason.is_some() {

@@ -1,10 +1,10 @@
 use crate::game_options::Map::{TheSkeld, MiraHq, Polus};
 use crate::coding::{Packet, DecodeResult, EncodeResult};
 use std::io::{Error, ErrorKind, Read, Write};
-use byteorder::{WriteBytesExt, ReadBytesExt, BigEndian};
+use byteorder::{WriteBytesExt, ReadBytesExt};
 
 #[derive(Debug, PartialEq)]
-pub struct GameOptions{
+pub struct GameOptions {
     len_useless: i32,
     version: u8,
     max_players: u8,
@@ -28,9 +28,10 @@ pub struct GameOptions{
     visual_tasks: bool
 }
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 #[repr(u32)]
-pub enum Language{
+pub enum Language {
     Other = 1,
     Spanish = 2,
     Korean = 4,
@@ -50,7 +51,7 @@ pub enum Map {
     Polus
 }
 
-impl Packet for Map{
+impl Packet for Map {
     fn decode(read: &mut dyn Read) -> DecodeResult<Self> where
         Self: Sized {
         match read.read_u8()? {
@@ -61,7 +62,7 @@ impl Packet for Map{
         }
     }
 
-    fn handle(self: Box<Self>, write: &mut dyn Write) -> EncodeResult{
+    fn handle(self: Box<Self>, write: &mut dyn Write) -> EncodeResult {
         write.write_u8(match self.as_ref(){
             TheSkeld => 0,
             MiraHq => 1,
