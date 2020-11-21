@@ -1,6 +1,6 @@
 # Among-rs
 A work-in-progress protocol implementation of Among Us in Rust.
-This isn't being worked on right now, due to me being busy, but instead of a library I'm making a binary. 
+This isn't being worked on right now, due to me being busy.
 
 ## Resources
 Resources I've used to learn about the protocol
